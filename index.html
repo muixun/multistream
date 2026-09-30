@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multistreams</title>
+    
+    <!-- Henter stilarket ditt -->
+    <link rel="stylesheet" href="static/css/multitwitch.css">
+    
+    <!-- Henter jQuery (kreves for at chat og iframes skal fungere) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+    
+    <!-- Henter din egen JavaScript-fil -->
+    <script src="static/js/multitwitch.js"></script>
+    
+    <style>
+/* Rent, mørkt og moderne design */
+        body { 
+            margin: 0; padding: 0; background-color: #0b0b0c; color: #fff; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+        }
+        #helpbox {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; width: 90%; max-width: 650px;
+        }
+        h1.title { font-size: 3.5em; font-weight: 700; margin-bottom: 5px; color: #fff; letter-spacing: -0.5px; }
+        p.subtitle { font-size: 1.1em; color: #888; margin-bottom: 40px; }
+        .commands-box { background: #151518; padding: 30px 40px; border-radius: 8px; border: 1px solid #2a2a2d; text-align: left; }
+        .commands-title { font-size: 0.9em; font-weight: 600; margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #2a2a2d; padding-bottom: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
+        .cmd-item { display: flex; align-items: center; margin-bottom: 12px; font-size: 1.1em; color: #ccc; }
+        .cmd-item:last-child { margin-bottom: 0; }
+        .badge { padding: 4px 10px; border-radius: 4px; font-weight: 600; width: 90px; text-align: center; margin-right: 15px; color: #fff; font-size: 0.85em; }
+        .code-block { background: #000; padding: 4px 8px; border-radius: 4px; color: #fff; font-family: monospace; border: 1px solid #333; }
+
+        /* Styling for menyen */
+        #change_streams { 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            z-index: 9999; 
+            background: #151518; 
+            border: 1px solid #333; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
+        }
+    </style>
+</head>
+<body>
+
+<!-- Forsiden -->
+<div id="helpbox">
+    <h1 class="title">Multistreams</h1>
+    <p class="subtitle">Watch multiple streams or videos simultaneously.</p>
+
+    <div class="commands-box">
+        <h3 class="commands-title">Commands</h3>
+        <div class="cmd-item"><span class="badge" style="background: #9146FF;">Twitch</span> <span class="code-block">username</span></div>
+        <div class="cmd-item"><span class="badge" style="background: #FF0000;">YouTube</span> <span class="code-block">yt:video-ID</span></div>
+        <div class="cmd-item"><span class="badge" style="background: #53FC18; color:#000;">Kick</span> <span class="code-block">kick:username</span></div>
+        <div class="cmd-item"><span class="badge" style="background: #85C742;">Rumble</span> <span class="code-block">rumble:video-ID</span></div>
+        <div class="cmd-item"><span class="badge" style="background: #6441a5;">VODs</span> <span class="code-block">tvod:video-ID</span></div>
+    </div>
+</div>
+
+<!-- Her bor selve videospillerne og chatten (skjult til man legger til noe) -->
+<div id="wrapper" style="display: none;">
+    <div id="streams"></div>
+    <div id="chatbox">
+        <ul id="tablist"></ul>
+    </div>
+</div>
+
+<!-- Menyen for å endre strømmer -->
+<div id="change_streams" style="display: none;">
+    <form>
+        <div id="stream_boxes"></div>
+        <input type="button" value="Add Stream" onclick="add_stream_box()"><br><br>
+        <input type="submit" value="Apply" style="font-weight: bold;">
+        <input type="button" value="Cancel" onclick="change_streams()">
+    </form>
+</div>
+
+<!-- Knappene nede i høyre hjørne -->
+<div id="bottom_right" style="position: fixed; bottom: 10px; right: 10px; z-index: 1000; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px;">
+    <a href="javascript:change_streams()" style="color: #ccc; text-decoration: none;">Change Streams</a> | 
+    <a href="javascript:toggle_chat()" style="color: #ccc; text-decoration: none;">Toggle Chat</a>
+</div>
+
+</body>
+</html>
