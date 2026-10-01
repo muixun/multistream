@@ -11,24 +11,31 @@
     <script src="static/js/multitwitch.js"></script>
     
     <style>
-        /* Chat-faner med nøytral mørkegrå farge på aktiv fane */
+        /* Helt svart bakgrunn for videospillerne */
+        body { 
+            margin: 0; padding: 0; background-color: #000; color: #fff; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+        }
+
+        /* Chat-faner som bryter til ny linje (flex-wrap) */
         #tablist { 
-            display: flex; gap: 8px; list-style: none; padding: 0; margin: 0; margin-bottom: 10px; 
+            display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0; margin-bottom: 10px; 
         }
         #tablist li { margin: 0; }
         #tablist a { 
             color: #fff; text-decoration: none; background: #2a2a2d; 
             padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: bold; 
+            display: inline-block;
         }
-        #tablist .ui-tabs-active a, #tablist a:hover { 
-            background: #444 !important; /* Mørk, nøytral grå */
-            color: #fff;
-        }
-        
-        body { 
-            margin: 0; padding: 0; background-color: #0b0b0c; color: #fff; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-        }
+
+        /* Spesifikke farger for hver plattform (Hover og Aktiv fane) */
+        .tab-twitch a:hover, .ui-tabs-active.tab-twitch a { background: #9146FF !important; color: #fff !important; }
+        .tab-yt a:hover, .ui-tabs-active.tab-yt a, .tab-youtube a:hover, .ui-tabs-active.tab-youtube a { background: #FF0000 !important; color: #fff !important; }
+        .tab-kick a:hover, .ui-tabs-active.tab-kick a { background: #53FC18 !important; color: #000 !important; }
+        .tab-rumble a:hover, .ui-tabs-active.tab-rumble a { background: #85C742 !important; color: #000 !important; }
+        /* Standard nøytral for alt annet */
+        .ui-tabs-active a, #tablist a:hover { background: #444 !important; color: #fff; }
+
         #helpbox {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             text-align: center; width: 90%; max-width: 650px;
@@ -122,14 +129,14 @@
     </div>
 </div>
 
-<div id="bottom_right" style="position: fixed; bottom: 10px; right: 10px; z-index: 1000; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px;">
+<!-- Menyen nede i hjørnet: Solid svart bakgrunn med kant forhindrer fargeendring -->
+<div id="bottom_right" style="position: fixed; bottom: 10px; right: 10px; z-index: 1000; background: #000; border: 1px solid #333; padding: 5px 10px; border-radius: 4px;">
     <a href="#" id="open-streams-btn" style="color: #ccc; text-decoration: none;">Change Streams</a> |
     <a href="javascript:toggle_chat()" style="color: #ccc; text-decoration: none;">Toggle Chat</a>
 </div>
 
 <script>
     function getCurrentStreams() {
-        // Dekoder URLen slik at eventuelle spesialtegn (%3A) blir til vanlige kolon igjen
         let rawHash = window.location.hash.replace('#', '');
         if (!rawHash) return [];
         return decodeURIComponent(rawHash).split('/').filter(s => s.trim() !== '');
@@ -149,7 +156,6 @@
         
         let newHash = streams.length > 0 ? streams.join('/') : '';
         
-        // Sjekker om adressen allerede er lik. Hvis ja, tving oppdatering uansett. 
         if (decodeURIComponent(window.location.hash.replace('#', '')) === newHash) {
             if (typeof load_streams_from_hash === 'function') {
                 load_streams_from_hash();
@@ -220,7 +226,6 @@
 
     document.getElementById('apply-btn').addEventListener('click', applyStreams);
     
-    // Logikk for å huske om chat er lukket eller åpen
     window.addEventListener('load', function() {
         if (sessionStorage.getItem('chatClosed') === 'true') {
             setTimeout(function() {

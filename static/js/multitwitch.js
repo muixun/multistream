@@ -90,7 +90,6 @@ function parse_stream_name(raw_name) {
     return { platform: 'twitch', channel: clean_name }; 
 }
 
-// Fjerner absolutt alt av ugyldige tegn slik at systemet aldri krasjer
 function make_safe_id(str) {
     return str.replace(/[^a-zA-Z0-9]/g, '_');
 }
@@ -149,10 +148,12 @@ function chat_object(raw_name) {
     return $('<div id="chat-' + safe_id + '" data-streamid="' + raw_name + '" class="stream_chat"><iframe frameborder="0" scrolling="no" id="chat-' + safe_id + '-embed" src="' + iframe_src + '" height="100%" width="100%"></iframe></div>');
 }
 
+/* Her legger vi på plattform-navnet som en ekstra CSS-klasse for farging */
 function chat_tab_object(raw_name) {
     var streamInfo = parse_stream_name(raw_name);
     var safe_id = make_safe_id(raw_name);
-    return $('<li data-streamid="' + raw_name + '"><a href="#chat-' + safe_id + '">' + streamInfo.channel + '</a></li>');
+    var platformClass = 'tab-' + streamInfo.platform; 
+    return $('<li data-streamid="' + raw_name + '" class="' + platformClass + '"><a href="#chat-' + safe_id + '">' + streamInfo.channel + '</a></li>');
 }
 
 $(document).ready(function() {
