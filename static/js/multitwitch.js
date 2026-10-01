@@ -11,13 +11,19 @@ function optimize_size(n) {
     if (n === 0) {
         $("#helpbox").show();
         $("#wrapper").hide();
-        hide_chat();
+        chat_hidden = true;
+        $("#chatbox").hide();
         return;
     } else {
         $("#helpbox").hide();
         $("#wrapper").show();
-        if (n > 0 && $("#chatbox").is(":hidden") && !chat_hidden) {
-            show_chat();
+        
+        if (sessionStorage.getItem('chatClosed') === 'true') {
+            chat_hidden = true;
+            $("#chatbox").hide();
+        } else {
+            chat_hidden = false;
+            $("#chatbox").show();
         }
     }
 
@@ -51,6 +57,7 @@ function optimize_size(n) {
             best_height = max_height;
         }
     }
+    
     $(".stream").height(Math.floor(best_height));
     $(".stream").width(Math.floor(best_width));
 
@@ -65,31 +72,13 @@ function optimize_size(n) {
     });
 }
 
-function hide_chat() {
-    chat_hidden = true;
-    $("#chatbox").hide();
-    optimize_size(-1);
-}
-
-function show_chat() {
-    chat_hidden = false;
-    $("#chatbox").show();
-    optimize_size(-1);
-}
-
 function toggle_chat() {
-    if (chat_hidden) { show_chat(); } else { hide_chat(); }
-}
-
-// Omdøpt for å unngå kollisjon med HTML-ID
-function toggle_menu() {
-    var menu = $("#change_streams");
-    if (menu.is(":visible")) {
-        menu.hide(); 
-    } else {
-        menu.show(); 
-        focus_last_stream_box();
+    if (chat_hidden) { 
+        sessionStorage.setItem('chatClosed', 'false');
+    } else { 
+        sessionStorage.setItem('chatClosed', 'true');
     }
+    optimize_size(-1);
 }
 
 function parse_stream_name(raw_name) {
@@ -101,11 +90,16 @@ function parse_stream_name(raw_name) {
     return { platform: 'twitch', channel: clean_name }; 
 }
 
+// Fjerner absolutt alt av ugyldige tegn slik at systemet aldri krasjer
+function make_safe_id(str) {
+    return str.replace(/[^a-zA-Z0-9]/g, '_');
+}
+
 function stream_object(raw_name) {
     var streamInfo = parse_stream_name(raw_name);
     var platform = streamInfo.platform;
     var name = streamInfo.channel;
-    var parentDomain = window.location.hostname; 
+    var parentDomain = window.location.hostname || "muixun.github.io"; 
     var iframe_src = "";
 
     if (platform === "twitch") {
@@ -123,20 +117,20 @@ function stream_object(raw_name) {
         iframe_src = 'https://player.twitch.tv/?muted=true&channel=' + name + '&parent=' + parentDomain;
     }
 
-    var safe_id = raw_name.replace(':', '-');
-    return $('<iframe id="embed_' + safe_id + '" src="' + iframe_src + '" class="stream" allowfullscreen="true"></iframe>');
+    var safe_id = make_safe_id(raw_name);
+    return $('<iframe id="embed_' + safe_id + '" data-streamid="' + raw_name + '" src="' + iframe_src + '" class="stream" allowfullscreen="true"></iframe>');
 }
 
 function chat_object(raw_name) {
     var streamInfo = parse_stream_name(raw_name);
     var platform = streamInfo.platform;
     var name = streamInfo.channel;
-    var parentDomain = window.location.hostname;
+    var parentDomain = window.location.hostname || "muixun.github.io";
     var iframe_src = "";
 
     if (platform === "tvod" || platform === "twitchvod") {
-        var safe_id = raw_name.replace(':', '-');
-        return $('<div id="chat-' + safe_id + '" class="stream_chat" style="color: white; font-family: sans-serif; text-align: center; padding-top: 50px;">VOD Chat replay is not supported by Twitch.</div>');
+        var safe_id = make_safe_id(raw_name);
+        return $('<div id="chat-' + safe_id + '" data-streamid="' + raw_name + '" class="stream_chat" style="color: white; font-family: sans-serif; text-align: center; padding-top: 50px;">VOD Chat replay is not supported by Twitch.</div>');
     }
 
     if (platform === "twitch") {
@@ -151,54 +145,28 @@ function chat_object(raw_name) {
         iframe_src = 'https://twitch.tv/embed/' + name + '/chat?parent=' + parentDomain;
     }
 
-    var safe_id = raw_name.replace(':', '-');
-    return $('<div id="chat-' + safe_id + '" class="stream_chat"><iframe frameborder="0" scrolling="no" id="chat-' + safe_id + '-embed" src="' + iframe_src + '" height="100%" width="100%"></iframe></div>');
+    var safe_id = make_safe_id(raw_name);
+    return $('<div id="chat-' + safe_id + '" data-streamid="' + raw_name + '" class="stream_chat"><iframe frameborder="0" scrolling="no" id="chat-' + safe_id + '-embed" src="' + iframe_src + '" height="100%" width="100%"></iframe></div>');
 }
 
 function chat_tab_object(raw_name) {
     var streamInfo = parse_stream_name(raw_name);
-    var safe_id = raw_name.replace(':', '-');
-    return $('<li><a href="#chat-' + safe_id + '">' + streamInfo.channel + '</a></li>');
+    var safe_id = make_safe_id(raw_name);
+    return $('<li data-streamid="' + raw_name + '"><a href="#chat-' + safe_id + '">' + streamInfo.channel + '</a></li>');
 }
 
-function add_stream_box() {
-    var box = $('<input type="text" value="" placeholder="username or yt:ID" style="margin-bottom: 5px;"><br>');
-    $("#stream_boxes").append(box);
-    $("#stream_boxes input[type=text]:last").focus();
-}
-
-function focus_last_stream_box() {
-    $("#stream_boxes input[type=text]:last").focus();
-}
-
-// Laster inn alt når siden er klar
 $(document).ready(function() {
     load_streams_from_hash();
 
     $(window).on('hashchange', function() {
         load_streams_from_hash();
     });
-
-    $("#change_streams form").off("submit").on("submit", function(e) {
-        e.preventDefault();
-        var streams = [];
-        $("#stream_boxes input[type=text]").each(function() {
-            var val = $(this).val().trim();
-            if (val !== "") {
-                streams.push(val);
-            }
-        });
-        window.location.hash = streams.join("/");
-        toggle_menu(); 
-    });
 });
 
-// Sørger for at iframene tilpasser seg hvis du drar i nettleservinduet
 $(window).on('resize', function() {
     optimize_size(-1);
 });
 
-// Tvinger VODs på plass etter at de er ferdiglastet
 $(window).on('load', function() {
     setTimeout(function() {
         optimize_size(-1);
@@ -206,41 +174,65 @@ $(window).on('load', function() {
 });
 
 function load_streams_from_hash() {
-    var hash = window.location.hash.substring(1); 
+    var rawHash = window.location.hash.substring(1); 
+    var hash = decodeURIComponent(rawHash);
+    var streams = hash ? hash.split('/').map(s => s.trim()).filter(s => s !== "") : [];
     
-    $("#streams").empty();
-    $("#tablist").empty();
-    $(".stream_chat").remove();
-    $("#stream_boxes").empty(); 
-    
-    if (!hash) {
+    if (streams.length === 0) {
+        $("#streams").empty();
+        $("#tablist").empty();
+        $(".stream_chat").remove();
         optimize_size(0);
         return;
     }
 
-    var streams = hash.split('/');
-    var valid_streams = 0;
-    
-    for (var i = 0; i < streams.length; i++) {
-        var stream = streams[i].trim();
-        if (stream === "") continue;
-        valid_streams++;
-        
-        $("#streams").append(stream_object(stream));
-        $("#tablist").append(chat_tab_object(stream));
-        $("#chatbox").append(chat_object(stream));
-        
-        var input_box = $('<input type="text" value="' + stream + '" style="margin-bottom: 5px;"><br>');
-        $("#stream_boxes").append(input_box);
-    }
-    
-    add_stream_box();
+    $("#streams .stream").each(function() {
+        var id = $(this).attr("data-streamid");
+        if (!streams.includes(id)) {
+            $(this).remove();
+        }
+    });
 
-    if ($("#chatbox").data("ui-tabs")) {
-        $("#chatbox").tabs("refresh");
-    } else {
-        $("#chatbox").tabs();
+    $("#tablist li").each(function() {
+        var id = $(this).attr("data-streamid");
+        if (!streams.includes(id)) {
+            $(this).remove();
+        }
+    });
+
+    $(".stream_chat").each(function() {
+        var id = $(this).attr("data-streamid");
+        if (!streams.includes(id)) {
+            $(this).remove();
+        }
+    });
+
+    for (var i = 0; i < streams.length; i++) {
+        var stream = streams[i];
+        
+        var exists = false;
+        $("#streams .stream").each(function() {
+            if ($(this).attr("data-streamid") === stream) {
+                exists = true;
+            }
+        });
+
+        if (!exists) {
+            $("#streams").append(stream_object(stream));
+            $("#tablist").append(chat_tab_object(stream));
+            $("#chatbox").append(chat_object(stream));
+        }
     }
     
-    optimize_size(valid_streams);
+    try {
+        if ($("#chatbox").hasClass("ui-tabs")) {
+            $("#chatbox").tabs("refresh");
+        } else {
+            $("#chatbox").tabs();
+        }
+    } catch(e) {
+        console.log("Ignorerer feil i tabs: ", e);
+    }
+    
+    optimize_size(streams.length);
 }

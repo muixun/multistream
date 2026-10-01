@@ -4,18 +4,27 @@
     <meta charset="UTF-8">
     <title>Multistreams</title>
     
-    <!-- Henter stilarket ditt -->
     <link rel="stylesheet" href="static/css/multitwitch.css">
     
-    <!-- Henter jQuery (kreves for at chat og iframes skal fungere) -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
-    
-    <!-- Henter din egen JavaScript-fil -->
     <script src="static/js/multitwitch.js"></script>
     
     <style>
-/* Rent, mørkt og moderne design */
+        /* Chat-faner med nøytral mørkegrå farge på aktiv fane */
+        #tablist { 
+            display: flex; gap: 8px; list-style: none; padding: 0; margin: 0; margin-bottom: 10px; 
+        }
+        #tablist li { margin: 0; }
+        #tablist a { 
+            color: #fff; text-decoration: none; background: #2a2a2d; 
+            padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: bold; 
+        }
+        #tablist .ui-tabs-active a, #tablist a:hover { 
+            background: #444 !important; /* Mørk, nøytral grå */
+            color: #fff;
+        }
+        
         body { 
             margin: 0; padding: 0; background-color: #0b0b0c; color: #fff; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -33,28 +42,55 @@
         .badge { padding: 4px 10px; border-radius: 4px; font-weight: 600; width: 90px; text-align: center; margin-right: 15px; color: #fff; font-size: 0.85em; }
         .code-block { background: #000; padding: 4px 8px; border-radius: 4px; color: #fff; font-family: monospace; border: 1px solid #333; }
 
-        /* Styling for menyen */
-        #change_streams { 
+        #stream_menu { 
             position: fixed; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
+            top: 50%; left: 50%; transform: translate(-50%, -50%); 
             z-index: 9999; 
-            background: #151518; 
-            border: 1px solid #333; 
-            padding: 20px; 
+            background: #000; 
+            border: 2px solid #fff; 
+            padding: 12px; 
             border-radius: 8px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
+            display: none; 
+            flex-direction: column; 
+            gap: 8px; 
+            min-width: 160px;
         }
+        #active_streams_list {
+            display: flex; flex-direction: column; gap: 5px; margin-bottom: 5px;
+        }
+        .stream-checkbox-row {
+            display: flex; align-items: center; gap: 8px; color: #fff;
+            font-weight: bold; font-size: 14px; cursor: pointer;
+        }
+        #new_stream_inputs {
+            display: flex; flex-direction: column; gap: 5px;
+        }
+        .stream-input {
+            width: 100%; box-sizing: border-box;
+            padding: 4px 6px; border-radius: 2px; border: 2px solid #333;
+            background: #fff; color: #000; font-size: 14px; outline: none;
+        }
+        .stream-input:focus { border-color: #000; }
+        
+        .add-stream-text {
+            text-align: center; font-size: 13px; font-weight: bold; color: #fff;
+            margin-top: 2px; margin-bottom: 4px;
+        }
+
+        .modal-buttons { display: flex; justify-content: space-between; gap: 10px; }
+        .modal-buttons button {
+            flex: 1; padding: 4px 0; border: 1px solid #ccc; border-radius: 2px;
+            cursor: pointer; font-weight: normal; font-size: 13px;
+            background: #f0f0f0; color: #000;
+        }
+        .modal-buttons button:hover { background: #ddd; }
     </style>
 </head>
 <body>
 
-<!-- Forsiden -->
 <div id="helpbox">
     <h1 class="title">Multistreams</h1>
     <p class="subtitle">Watch multiple streams or videos simultaneously.</p>
-
     <div class="commands-box">
         <h3 class="commands-title">Commands</h3>
         <div class="cmd-item"><span class="badge" style="background: #9146FF;">Twitch</span> <span class="code-block">username</span></div>
@@ -65,7 +101,6 @@
     </div>
 </div>
 
-<!-- Her bor selve videospillerne og chatten (skjult til man legger til noe) -->
 <div id="wrapper" style="display: none;">
     <div id="streams"></div>
     <div id="chatbox">
@@ -73,21 +108,133 @@
     </div>
 </div>
 
-<!-- Menyen for å endre strømmer -->
-<div id="change_streams" style="display: none;">
-    <form>
-        <div id="stream_boxes"></div>
-        <input type="button" value="Add Stream" onclick="add_stream_box()"><br><br>
-        <input type="submit" value="Apply" style="font-weight: bold;">
-        <input type="button" value="Cancel" onclick="change_streams()">
-    </form>
+<div id="stream_menu">
+    <div id="active_streams_list"></div>
+    
+    <div id="new_stream_inputs">
+        <input type="text" class="stream-input" placeholder="">
+    </div>
+    
+    <div class="add-stream-text">Add Stream</div>
+    <div class="modal-buttons">
+        <button id="cancel-btn">Cancel</button>
+        <button id="apply-btn">Ok</button>
+    </div>
 </div>
 
-<!-- Knappene nede i høyre hjørne -->
 <div id="bottom_right" style="position: fixed; bottom: 10px; right: 10px; z-index: 1000; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px;">
-    <a href="javascript:change_streams()" style="color: #ccc; text-decoration: none;">Change Streams</a> | 
+    <a href="#" id="open-streams-btn" style="color: #ccc; text-decoration: none;">Change Streams</a> |
     <a href="javascript:toggle_chat()" style="color: #ccc; text-decoration: none;">Toggle Chat</a>
 </div>
 
+<script>
+    function getCurrentStreams() {
+        // Dekoder URLen slik at eventuelle spesialtegn (%3A) blir til vanlige kolon igjen
+        let rawHash = window.location.hash.replace('#', '');
+        if (!rawHash) return [];
+        return decodeURIComponent(rawHash).split('/').filter(s => s.trim() !== '');
+    }
+
+    function applyStreams() {
+        let streams = [];
+        
+        const checkboxes = document.querySelectorAll('#active_streams_list input[type="checkbox"]:checked');
+        checkboxes.forEach(cb => streams.push(cb.value));
+        
+        const inputs = document.querySelectorAll('#new_stream_inputs .stream-input');
+        inputs.forEach(input => {
+            const val = input.value.trim();
+            if (val) streams.push(val);
+        });
+        
+        let newHash = streams.length > 0 ? streams.join('/') : '';
+        
+        // Sjekker om adressen allerede er lik. Hvis ja, tving oppdatering uansett. 
+        if (decodeURIComponent(window.location.hash.replace('#', '')) === newHash) {
+            if (typeof load_streams_from_hash === 'function') {
+                load_streams_from_hash();
+            }
+        } else {
+            window.location.hash = newHash;
+        }
+        
+        document.getElementById('stream_menu').style.display = 'none';
+    }
+
+    function setupInput(inputElement) {
+        inputElement.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); 
+                
+                const newBox = document.createElement('input');
+                newBox.type = 'text';
+                newBox.className = 'stream-input';
+                newBox.placeholder = '';
+                
+                document.getElementById('new_stream_inputs').appendChild(newBox);
+                setupInput(newBox); 
+                newBox.focus(); 
+            }
+        });
+    }
+
+    setupInput(document.querySelector('.stream-input'));
+
+    document.getElementById('open-streams-btn').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const listContainer = document.getElementById('active_streams_list');
+        listContainer.innerHTML = ''; 
+        
+        const currentStreams = getCurrentStreams();
+        
+        currentStreams.forEach(stream => {
+            const row = document.createElement('label');
+            row.className = 'stream-checkbox-row';
+            
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = stream;
+            cb.checked = true; 
+            
+            const text = document.createTextNode(stream);
+            
+            row.appendChild(cb);
+            row.appendChild(text);
+            listContainer.appendChild(row);
+        });
+
+        const inputContainer = document.getElementById('new_stream_inputs');
+        while(inputContainer.children.length > 1) {
+            inputContainer.removeChild(inputContainer.lastChild);
+        }
+        inputContainer.children[0].value = '';
+
+        document.getElementById('stream_menu').style.display = 'flex';
+        setTimeout(() => inputContainer.children[0].focus(), 50);
+    });
+
+    document.getElementById('cancel-btn').addEventListener('click', function() {
+        document.getElementById('stream_menu').style.display = 'none';
+    });
+
+    document.getElementById('apply-btn').addEventListener('click', applyStreams);
+    
+    // Logikk for å huske om chat er lukket eller åpen
+    window.addEventListener('load', function() {
+        if (sessionStorage.getItem('chatClosed') === 'true') {
+            setTimeout(function() {
+                if (typeof toggle_chat === "function") {
+                    toggle_chat(); 
+                }
+            }, 500); 
+        }
+    });
+
+    document.querySelector('a[href="javascript:toggle_chat()"]').addEventListener('click', function() {
+        let isCurrentlyClosed = sessionStorage.getItem('chatClosed') === 'true';
+        sessionStorage.setItem('chatClosed', !isCurrentlyClosed);
+    });
+</script>
 </body>
 </html>
